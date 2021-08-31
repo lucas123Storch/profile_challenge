@@ -1,30 +1,17 @@
-part of 'login_bloc.dart';
+import 'package:meta/meta.dart';
+import 'package:equatable/equatable.dart';
 
 abstract class LoginEvent extends Equatable {
-  const LoginEvent();
-
   @override
   List<Object> get props => [];
 }
 
-class LoginUsernameChanged extends LoginEvent {
-  const LoginUsernameChanged(this.username);
-
-  final String username;
-
-  @override
-  List<Object> get props => [username];
-}
-
-class LoginPasswordChanged extends LoginEvent {
-  const LoginPasswordChanged(this.password);
-
+class LoginInWithEmailButtonPressed extends LoginEvent {
+  final String email;
   final String password;
 
-  @override
-  List<Object> get props => [password];
-}
+  LoginInWithEmailButtonPressed({@required this.email, @required this.password});
 
-class LoginSubmitted extends LoginEvent {
-  const LoginSubmitted();
+  @override
+  List<Object> get props => [email, password];
 }
