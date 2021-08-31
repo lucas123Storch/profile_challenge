@@ -23,11 +23,6 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Text(
-                "LOGIN",
-                style: TextStyle(fontWeight: FontWeight.bold,fontSize: 20),
-              ),
-              SizedBox(height: size.height * 0.03),
               SvgPicture.asset(
                 "assets/icons/image2.svg",
                 height: size.height * 0.35,
@@ -44,9 +39,10 @@ class _LoginViewState extends State<LoginView> with SingleTickerProviderStateMix
                 onChanged: (value) {},
               ),
     
-              RoundedButton(
-                text: "LOGIN",
-                press: () {},
+              GestureDetector(
+                child: RoundedButton(
+                  text: "LOGIN",
+                ),
               ),
     
               SizedBox(height: size.height * 0.03),
