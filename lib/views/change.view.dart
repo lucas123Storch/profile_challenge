@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:profile_challenge/components/rounded_button.component.dart';
+import 'package:profile_challenge/models/user.dart';
 import 'package:profile_challenge/views/login.view.dart';
+import 'package:profile_challenge/views/register.view.dart';
 
 class ChangeView extends StatelessWidget {
   const ChangeView({Key? key}) : super(key: key);
@@ -33,20 +35,20 @@ class ChangeView extends StatelessWidget {
                   text: "Entrar",
                 ),
               ),
-              RoundedButton(
-                text: "Fazer Cadastro",
-                color: Colors.black12,
-                textColor: Colors.black,
-                // press: () {
-                //   Navigator.push(
-                //     context,
-                //     MaterialPageRoute(
-                //       builder: (context) {
-                //         return LoginView();
-                //       },
-                //     ),
-                //   );
-                // },
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) {
+                      return RegisterView(user: User(),);
+                    }),
+                  );
+                },
+                child: RoundedButton(
+                  text: "Fazer Cadastro",
+                  color: Colors.black12,
+                  textColor: Colors.black,
+                ),
               ),
             ],
           ),

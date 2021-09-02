@@ -1,12 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:profile_challenge/blocs/blocs.dart';
 import 'package:profile_challenge/components/already_have_an_account_acheck.component.dart';
 import 'package:profile_challenge/components/rounded_button.component.dart';
 import 'package:profile_challenge/components/rounded_input_field.component.dart';
 import 'package:profile_challenge/components/rounded_password_field.component.dart';
-import 'package:profile_challenge/services/authentication_service.dart';
+import 'package:profile_challenge/models/user.dart';
+import 'package:profile_challenge/views/profile.view.dart';
+import 'package:profile_challenge/views/register.view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -17,190 +23,122 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView>
     with SingleTickerProviderStateMixin {
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    return Scaffold(
-      body: SafeArea(
-        child: BlocBuilder<AuthenticationBloc, AuthenticationState>(
-          builder: (context, state) {
-            final authBloc = BlocProvider.of<AuthenticationBloc>(context);
-            if (state is AuthenticationNotAuthenticated) {
-              return _AuthForm();
-            }
-            if (state is AuthenticationFailure) {
-              return Center(
-                  child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Text(state.message),
-                  FlatButton(
-                    textColor: Theme.of(context).primaryColor,
-                    child: Text('Retry'),
-                    onPressed: () {
-                      authBloc.add(AppLoaded());
-                    },
-                  )
-                ],
-              ));
-            }
-            // return splash screen
-            return Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class Background extends StatelessWidget {
-  final Widget child;
-  const Background({
-    Key? key,
-    required this.child,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-    return Container(
-      width: double.infinity,
-      height: size.height,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Positioned(
-            top: 0,
-            left: 0,
-            child: Image.asset(
-              "assets/images/main_top2.png",
-              width: size.width * 0.35,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Image.asset(
-              "assets/images/login_bottom2.png",
-              width: size.width * 0.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
-class _AuthForm extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final authService = RepositoryProvider.of<AuthenticationService>(context);
-    final authBloc = BlocProvider.of<AuthenticationBloc>(context);
-
-    return Container(
-      alignment: Alignment.center,
-      child: BlocProvider<LoginBloc>(
-        create: (context) => LoginBloc(authBloc, authService),
-        child: _SignInForm(),
-      ),
-    );
-  }
-}
-
-class _SignInForm extends StatefulWidget {
-  @override
-  __SignInFormState createState() => __SignInFormState();
-}
-
-class __SignInFormState extends State<_SignInForm> {
-  final GlobalKey<FormState> _key = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _emailController = TextEditingController();
-  bool _autoValidate = false;
+  var maskNull = new MaskTextInputFormatter();
 
   @override
   Widget build(BuildContext context) {
-    final _loginBloc = BlocProvider.of<LoginBloc>(context);
+    final _authBloc = BlocProvider.of<AuthenticationBloc>(context);
     Size size = MediaQuery.of(context).size;
 
     _onLoginButtonPressed() {
-      if (_key.currentState!.validate()) {
-        _loginBloc.add(LoginInWithEmailButtonPressed(
+      if (_emailController.text.isNotEmpty &&
+          _passwordController.text.isNotEmpty) {
+        _authBloc.add(UserLogIn(
             email: _emailController.text, password: _passwordController.text));
       } else {
-        setState(() {
-          _autoValidate = true;
-        });
+        _authBloc.add(
+          AuthenticationFailed(
+            message: _emailController.text.isEmpty
+                ? 'Digite seu email'
+                : 'Digite sua senha',
+          ),
+        );
       }
     }
 
-    return BlocListener<LoginBloc, LoginState>(
-      listener: (context, state) {
-        if (state is LoginFailure) {
-          _showError(state.error);
-        }
-      },
-      child: BlocBuilder<LoginBloc, LoginState>(
-        builder: (context, state) {
-          if (state is LoginLoading) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          return Background(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  SvgPicture.asset(
-                    "assets/icons/image2.svg",
-                    height: size.height * 0.35,
+    return BlocConsumer<AuthenticationBloc, AuthenticationState>(
+        listener: (context, state) async {
+      if (state is AuthenticationFailure) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              return LoginView();
+            },
+          ),
+        );
+      } else if (state is AuthenticationAuthenticated) {
+        // _showSucccess("Usuário autenticado: ${state.user.name}");
+      
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              return ProfileView(user: state.user);
+            },
+          ),
+        );
+      }
+    }, builder: (context, state) {
+      return Scaffold(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                const SizedBox(
+                  height: 24,
+                ),
+                SvgPicture.asset(
+                  "assets/icons/image2.svg",
+                  height: size.height * 0.35,
+                ),
+                SizedBox(height: size.height * 0.03),
+                RoundedInputField(
+                  controller: _emailController,
+                  mask: maskNull,
+                  hintText: "Email",
+                  onChanged: (value) {
+                    _emailController.text = value;
+                  },
+                ),
+                RoundedPasswordField(
+                  onChanged: (value) {
+                    _passwordController.text = value;
+                  },
+                ),
+                GestureDetector(
+                  onTap: () => _onLoginButtonPressed(),
+                  child: RoundedButton(
+                    text: "LOGIN",
                   ),
-                  SizedBox(height: size.height * 0.03),
-                  RoundedInputField(
-                    hintText: "Your Email",
-                    onChanged: (value) {},
-                  ),
-                  RoundedPasswordField(
-                    onChanged: (value) {},
-                  ),
-                  GestureDetector(
-                    child: RoundedButton(
-                      text: "LOGIN",
-                    ),
-                  ),
-                  SizedBox(height: size.height * 0.03),
-                  AlreadyHaveAnAccountCheck(
-                    press: () {
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (context) {
-                      //       return SignUpScreen();
-                      //     },
-                      //   ),
-                      // );
-                    },
-                  ),
-                ],
-              ),
+                ),
+                SizedBox(height: size.height * 0.03),
+                AlreadyHaveAnAccountCheck(
+                  press: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) {
+                          return RegisterView(user: User());
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          );
-        },
-      ),
-    );
+          ),
+        ),
+      );
+    });
   }
 
   void _showError(String error) {
-    Scaffold.of(context).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(error),
       backgroundColor: Theme.of(context).errorColor,
     ));
+  }
+
+  void _showSucccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).accentColor,
+      ),
+    );
   }
 }

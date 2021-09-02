@@ -1,21 +1,190 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:profile_challenge/components/already_have_an_account_acheck.component.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:profile_challenge/blocs/authentication/authentication_bloc.dart';
+import 'package:profile_challenge/blocs/authentication/authentication_event.dart';
+import 'package:profile_challenge/blocs/authentication/authentication_state.dart';
+import 'package:profile_challenge/blocs/user/user_bloc.dart';
 import 'package:profile_challenge/components/rounded_button.component.dart';
 import 'package:profile_challenge/components/rounded_input_field.component.dart';
 import 'package:profile_challenge/components/rounded_password_field.component.dart';
+import 'package:profile_challenge/models/user.dart';
+import 'package:profile_challenge/models/user_to_create_or_update.dart';
+import 'package:profile_challenge/views/login.view.dart';
+
+enum ImageSourceType { gallery, camera }
 
 class RegisterView extends StatefulWidget {
-  const RegisterView({Key? key}) : super(key: key);
+  final User user;
+  const RegisterView({Key? key, required this.user}) : super(key: key);
 
   @override
   _RegisterViewState createState() => _RegisterViewState();
 }
 
-class _RegisterViewState extends State<RegisterView>
-    with SingleTickerProviderStateMixin {
+class _RegisterViewState extends State<RegisterView> {
+  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _cpfController = TextEditingController();
+  final _telController = TextEditingController();
+  final _civilStatusController = TextEditingController();
+  final _genderController = TextEditingController();
+
+  var maskTel = new MaskTextInputFormatter(mask: '(##) #####-####');
+  var maskCPF = new MaskTextInputFormatter(mask: '###.###.###-##');
+  var maskNull = new MaskTextInputFormatter();
+  late File fileData;
+  String base64Image = '';
+  bool edit = false;
   @override
   Widget build(BuildContext context) {
+    final _authBloc = BlocProvider.of<AuthenticationBloc>(context);
+    final _userBloc = BlocProvider.of<UserBloc>(context);
+    final ImagePicker _picker = ImagePicker();
+    void _showError(String error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error),
+        backgroundColor: Theme.of(context).errorColor,
+      ));
+    }
+
+    void _showSuccess(String error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(error),
+        backgroundColor: Colors.green,
+      ));
+    }
+
+    if (widget.user.email != null) {
+      _emailController.text =
+          widget.user.email != null ? widget.user.email! : "";
+      _nameController.text = widget.user.name != null ? widget.user.name! : "";
+      _cpfController.text = widget.user.cpf != null ? widget.user.cpf! : "";
+      _telController.text = widget.user.phone != null ? widget.user.phone! : "";
+      _civilStatusController.text =
+          widget.user.marital_status != null ? widget.user.marital_status! : "";
+      _genderController.text =
+          widget.user.gender != null ? widget.user.gender! : "";
+      edit = true;
+    }
+
+    _getFromGallery() async {
+      final XFile? image =
+          await _picker.pickImage(source: ImageSource.gallery).then((value) {
+        List<int> imageBytes = fileData.readAsBytesSync();
+        print(imageBytes);
+        base64Image = base64Encode(imageBytes);
+      });
+      print(image);
+    }
+
+    _onEditButtonPressed() {
+      if (_emailController.text.isNotEmpty &&
+          _nameController.text.isNotEmpty &&
+          _cpfController.text.isNotEmpty &&
+          _telController.text.isNotEmpty &&
+          _civilStatusController.text.isNotEmpty &&
+          _genderController.text.isNotEmpty) {
+        var user = new UserToCreateOrUpdate(
+            id: widget.user.id!,
+            name: _nameController.text,
+            cpf: _cpfController.text,
+            email: _emailController.text,
+            gender: _genderController.text,
+            maritalStatus: _civilStatusController.text,
+            phone: _telController.text,
+            avatar: base64Image,
+            password: _passwordController.text,
+            passwordConfirmation: _passwordController.text,
+            device_name: 'mobile_app');
+        _userBloc.add(
+          UpdateUserEvent(user: user, token: ''),
+        );
+        // edit = false;
+      } else {
+        var message = _emailController.text.isEmpty
+            ? 'Informe seu email'
+            : _nameController.text.isEmpty
+                ? 'Informe seu nome'
+                : _cpfController.text.isEmpty
+                    ? 'Informe seu CPF'
+                    : _genderController.text.isEmpty
+                        ? 'Informe seu gênero'
+                        : _civilStatusController.text.isEmpty
+                            ? 'Informe seu Estado Civil'
+                            : _telController.text.isEmpty
+                                ? 'Informe seu telefone'
+                                : edit == false
+                                    ? _passwordController.text.isEmpty
+                                        ? 'Informe uma senha'
+                                        : 'Os campos precisam estar todos preenchidos'
+                                    : "";
+        _showError(message);
+      }
+    }
+
+    _onRegisterButtonPressed() {
+      if (_emailController.text.isNotEmpty &&
+          _passwordController.text.isNotEmpty &&
+          _nameController.text.isNotEmpty &&
+          _cpfController.text.isNotEmpty &&
+          _telController.text.isNotEmpty &&
+          _civilStatusController.text.isNotEmpty &&
+          _genderController.text.isNotEmpty) {
+        var user = new UserToCreateOrUpdate(
+            name: _nameController.text,
+            cpf: _cpfController.text,
+            email: _emailController.text,
+            gender: _genderController.text,
+            maritalStatus: _civilStatusController.text,
+            phone: _telController.text,
+            avatar: base64Image,
+            password: _passwordController.text,
+            passwordConfirmation: _passwordController.text,
+            device_name: 'mobile_app',
+            id: null);
+        _authBloc.add(
+          RegisterEvent(user: user),
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              return LoginView();
+            },
+          ),
+        );
+      } else {
+        var message = _emailController.text.isEmpty
+            ? 'Informe seu email'
+            : _nameController.text.isEmpty
+                ? 'Informe seu nome'
+                : _cpfController.text.isEmpty
+                    ? 'Informe seu CPF'
+                    : _genderController.text.isEmpty
+                        ? 'Informe seu gênero'
+                        : _civilStatusController.text.isEmpty
+                            ? 'Informe seu Estado Civil'
+                            : _telController.text.isEmpty
+                                ? 'Informe seu telefone'
+                                : edit == false
+                                    ? _passwordController.text.isEmpty
+                                        ? 'Informe uma senha'
+                                        : 'Os campos precisam estar todos preenchidos'
+                                    : "";
+        _authBloc.add(
+          AuthenticationFailed(message: message),
+        );
+        _showError(message);
+      }
+    }
+
     Size size = MediaQuery.of(context).size;
     return Scaffold(
       body: Background(
@@ -24,44 +193,117 @@ class _RegisterViewState extends State<RegisterView>
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               SizedBox(height: size.height * 0.09),
-              SvgPicture.asset(
-                "assets/icons/image2.svg",
-                height: size.height * 0.35,
-              ),
-              SizedBox(height: size.height * 0.03),
-              RoundedInputField(
-                hintText: "Nome",
-                onChanged: (value) {},
-              ),
-              RoundedInputField(
-                hintText: "CPF",
-                onChanged: (value) {},
-              ),
-              RoundedInputField(
-                hintText: "Email",
-                onChanged: (value) {},
-              ),
-              RoundedInputField(
-                hintText: "Telefone",
-                onChanged: (value) {},
-              ),
-              RoundedInputField(
-                hintText: "Estado Civil",
-                onChanged: (value) {},
-              ),
-              RoundedInputField(
-                hintText: "Sexo",
-                onChanged: (value) {},
-              ),
-              RoundedPasswordField(
-                onChanged: (value) {},
-              ),
-              SizedBox(height: size.height * 0.03),
-              GestureDetector(
-                child: RoundedButton(
-                  text: "Cadastrar",
+              MaterialButton(
+                color: Colors.blue,
+                child: Text(
+                  "Selecionar Imagem",
+                  style: TextStyle(
+                      color: Colors.white70, fontWeight: FontWeight.bold),
                 ),
+                onPressed: () {
+                  _getFromGallery();
+                },
               ),
+              SizedBox(height: size.height * 0.03),
+              RoundedInputField(
+                controller: _nameController,
+                mask: maskNull,
+                hintText: "Nome",
+                onChanged: (value) {
+                  _nameController.text = value;
+                },
+              ),
+              RoundedInputField(
+                mask: maskCPF,
+                controller: _cpfController,
+                hintText: "CPF",
+                onChanged: (value) {
+                  _cpfController.text = value;
+                },
+              ),
+              RoundedInputField(
+                mask: maskNull,
+                controller: _emailController,
+                hintText: "Email",
+                onChanged: (value) {
+                  _emailController.text = value;
+                },
+              ),
+              RoundedInputField(
+                mask: maskTel,
+                hintText: "Telefone",
+                controller: _telController,
+                onChanged: (value) {
+                  _telController.text = value;
+                },
+              ),
+              RoundedInputField(
+                mask: maskNull,
+                controller: _civilStatusController,
+                hintText: "Estado Civil",
+                onChanged: (value) {
+                  _civilStatusController.text = value;
+                },
+              ),
+              RoundedInputField(
+                controller: _genderController,
+                mask: maskNull,
+                hintText: "Sexo",
+                onChanged: (value) {
+                  _genderController.text = value;
+                },
+              ),
+              edit == false
+                  ? RoundedPasswordField(
+                      onChanged: (value) {
+                        _passwordController.text = value;
+                      },
+                    )
+                  : Container(),
+              SizedBox(height: size.height * 0.03),
+              edit == false
+                  ? BlocConsumer(
+                      listener: (previous, current) {
+                        if (current is AuthenticationAuthenticated) {
+                        } else if (current is AuthenticationFailure) {
+                          _showError(current.message);
+                        }
+                      },
+                      bloc: _authBloc,
+                      builder: (context, state) {
+                        if (state is AuthenticationLoading) {
+                          return CircularProgressIndicator();
+                        } else if (state is! AuthenticationFailure) {
+                          return GestureDetector(
+                            onTap: () => _onRegisterButtonPressed(),
+                            child: RoundedButton(
+                              text: "Cadastrar",
+                            ),
+                          );
+                        } else {
+                          return GestureDetector(
+                            onTap: () => _onRegisterButtonPressed(),
+                            child: RoundedButton(
+                              text: "Cadastrar",
+                            ),
+                          );
+                        }
+                      })
+                  : BlocConsumer(
+                      listener: (previous, current) {
+                        if (current is UserUpdated) {
+                          _showSuccess("Editado com sucesso");
+                        }
+                      },
+                      bloc: _userBloc,
+                      builder: (context, state) {
+                        return GestureDetector(
+                          onTap: () => _onEditButtonPressed(),
+                          child: RoundedButton(
+                            text: "Salvar",
+                          ),
+                        );
+                      }),
               SizedBox(height: size.height * 0.03),
             ],
           ),

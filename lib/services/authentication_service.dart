@@ -1,31 +1,40 @@
-import '../exceptions/exceptions.dart';
-import '../models/models.dart';
+import 'dart:io';
 
-abstract class AuthenticationService {
-  Future<User> getCurrentUser();
-  Future<User> signInWithEmailAndPassword(String email, String password);
-  Future<void> signOut();
-}
+import 'package:dio/dio.dart';
+import 'package:profile_challenge/models/user.dart';
+import 'package:profile_challenge/models/user_to_create_or_update.dart';
+import 'package:profile_challenge/models/user_to_login.dart';
+import 'package:profile_challenge/services/api/auth_gateway.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class FakeAuthenticationService extends AuthenticationService {
-  @override
-  Future<User> getCurrentUser() async {
-    throw UnimplementedError();
-  }
+class AuthenticationService {
+  final AuthGateway _authGateway = AuthGateway(Dio());
 
-  @override
-  Future<User> signInWithEmailAndPassword(String email, String password) async {
-    await Future.delayed(Duration(seconds: 1)); 
+  Future<User?> signInWithEmailAndPassword(
+      String email, String password) async {
+    try {
+      final userToLogin = UserToLogin(
+          email: email,
+          password: password,
+          deviceName: Platform.operatingSystem);
 
-    if (email.toLowerCase() != 'test@domain.com' || password != 'testpass123') {
-      throw AuthenticationException(message: 'Wrong username or password');
+      final response =
+          await _authGateway.postUserToLogin(userToLogin: userToLogin);
+
+      SharedPreferences prfs = await SharedPreferences.getInstance();
+      prfs.setString("token", response.data!.token!);
+      return response.data?.user;
+    } catch (e) {
+      return Future.error(e);
     }
-    return User(name: 'Test User', email: email);
   }
 
-  @override
-  Future<void> signOut() {
-    // TODO: implement signOut
-    throw UnimplementedError();
+  Future<User?> register(UserToCreateOrUpdate user) async {
+    try {
+      final response = await _authGateway.createUser(user: user);
+      return response;
+    } catch (e) {
+      return Future.error(e);
+    }
   }
 }

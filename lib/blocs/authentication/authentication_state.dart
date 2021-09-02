@@ -1,6 +1,5 @@
-import 'package:meta/meta.dart';
 import 'package:equatable/equatable.dart';
-import '../../models/models.dart';
+import 'package:profile_challenge/models/user.dart';
 
 abstract class AuthenticationState extends Equatable {
   const AuthenticationState();
@@ -31,4 +30,14 @@ class AuthenticationFailure extends AuthenticationState {
 
   @override
   List<Object> get props => [message];
+}
+
+
+class UserRegistered extends AuthenticationState {
+  final User user;
+
+  UserRegistered({required this.user});
+
+  @override
+  List<Object> get props => [user];
 }
