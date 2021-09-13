@@ -61,7 +61,7 @@ class _LoginViewState extends State<LoginView>
         );
       } else if (state is AuthenticationAuthenticated) {
         // _showSucccess("Usuário autenticado: ${state.user.name}");
-      
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -92,11 +92,17 @@ class _LoginViewState extends State<LoginView>
                   hintText: "Email",
                   onChanged: (value) {
                     _emailController.text = value;
+                    _emailController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _emailController.text.length),
+                    );
                   },
                 ),
                 RoundedPasswordField(
                   onChanged: (value) {
                     _passwordController.text = value;
+                    _passwordController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _passwordController.text.length),
+                    );
                   },
                 ),
                 GestureDetector(

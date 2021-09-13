@@ -37,7 +37,7 @@ class UserGateway extends Gateway {
     token = prfs.getString("token")!;
     final url = '${environment.webAppUrl}/profile';
     return await request(url, (payLoad) {
-      return User.fromJson(payLoad["data"]);
+      return User.fromJson(payLoad["data"]["user"]);
     }, data: user.toJson(), token: token, method: HTTPMethod.put);
   }
 

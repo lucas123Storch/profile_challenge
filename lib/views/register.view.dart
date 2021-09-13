@@ -16,6 +16,7 @@ import 'package:profile_challenge/components/rounded_password_field.component.da
 import 'package:profile_challenge/models/user.dart';
 import 'package:profile_challenge/models/user_to_create_or_update.dart';
 import 'package:profile_challenge/views/login.view.dart';
+import 'package:profile_challenge/views/profile.view.dart';
 
 enum ImageSourceType { gallery, camera }
 
@@ -35,6 +36,8 @@ class _RegisterViewState extends State<RegisterView> {
   final _telController = TextEditingController();
   final _civilStatusController = TextEditingController();
   final _genderController = TextEditingController();
+
+  late User userCoplete;
 
   var maskTel = new MaskTextInputFormatter(mask: '(##) #####-####');
   var maskCPF = new MaskTextInputFormatter(mask: '###.###.###-##');
@@ -106,6 +109,7 @@ class _RegisterViewState extends State<RegisterView> {
         _userBloc.add(
           UpdateUserEvent(user: user, token: ''),
         );
+
         // edit = false;
       } else {
         var message = _emailController.text.isEmpty
@@ -151,14 +155,6 @@ class _RegisterViewState extends State<RegisterView> {
             id: null);
         _authBloc.add(
           RegisterEvent(user: user),
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) {
-              return LoginView();
-            },
-          ),
         );
       } else {
         var message = _emailController.text.isEmpty
@@ -211,6 +207,9 @@ class _RegisterViewState extends State<RegisterView> {
                 hintText: "Nome",
                 onChanged: (value) {
                   _nameController.text = value;
+                  _nameController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _nameController.text.length),
+                  );
                 },
               ),
               RoundedInputField(
@@ -219,6 +218,9 @@ class _RegisterViewState extends State<RegisterView> {
                 hintText: "CPF",
                 onChanged: (value) {
                   _cpfController.text = value;
+                  _cpfController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _cpfController.text.length),
+                  );
                 },
               ),
               RoundedInputField(
@@ -227,6 +229,9 @@ class _RegisterViewState extends State<RegisterView> {
                 hintText: "Email",
                 onChanged: (value) {
                   _emailController.text = value;
+                  _emailController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _emailController.text.length),
+                  );
                 },
               ),
               RoundedInputField(
@@ -235,6 +240,9 @@ class _RegisterViewState extends State<RegisterView> {
                 controller: _telController,
                 onChanged: (value) {
                   _telController.text = value;
+                  _telController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _telController.text.length),
+                  );
                 },
               ),
               RoundedInputField(
@@ -243,6 +251,9 @@ class _RegisterViewState extends State<RegisterView> {
                 hintText: "Estado Civil",
                 onChanged: (value) {
                   _civilStatusController.text = value;
+                  _civilStatusController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _civilStatusController.text.length),
+                  );
                 },
               ),
               RoundedInputField(
@@ -251,12 +262,19 @@ class _RegisterViewState extends State<RegisterView> {
                 hintText: "Sexo",
                 onChanged: (value) {
                   _genderController.text = value;
+                  _genderController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _genderController.text.length),
+                  );
                 },
               ),
               edit == false
                   ? RoundedPasswordField(
                       onChanged: (value) {
                         _passwordController.text = value;
+                        _passwordController.selection =
+                            TextSelection.fromPosition(
+                          TextPosition(offset: _passwordController.text.length),
+                        );
                       },
                     )
                   : Container(),
@@ -265,6 +283,15 @@ class _RegisterViewState extends State<RegisterView> {
                   ? BlocConsumer(
                       listener: (previous, current) {
                         if (current is AuthenticationAuthenticated) {
+                          current.user.avatar = base64Image;
+                          current.user.cpf = _cpfController.text;
+                          current.user.email = _emailController.text;
+                          current.user.gender = _genderController.text;
+                          current.user.marital_status = _civilStatusController.text;
+                          current.user.name = _nameController.text;
+                          current.user.phone = _telController.text;
+
+                          print(current.user);
                         } else if (current is AuthenticationFailure) {
                           _showError(current.message);
                         }
@@ -293,6 +320,14 @@ class _RegisterViewState extends State<RegisterView> {
                       listener: (previous, current) {
                         if (current is UserUpdated) {
                           _showSuccess("Editado com sucesso");
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) {
+                                return ProfileView(user: current.user);
+                              },
+                            ),
+                          );
                         }
                       },
                       bloc: _userBloc,
